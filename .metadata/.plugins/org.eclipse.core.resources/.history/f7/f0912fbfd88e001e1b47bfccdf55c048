@@ -1,0 +1,9 @@
+package com.doanmobile.service;
+
+import com.doanmobile.dto.NoteDto;
+import com.doanmobile.dto.UserDto;
+
+public interface INoteService {
+	NoteDto searchNote(String title);
+}
+

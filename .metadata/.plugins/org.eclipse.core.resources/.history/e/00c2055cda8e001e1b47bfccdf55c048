@@ -1,0 +1,58 @@
+package com.doanmobile.api;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.doanmobile.dto.NoteDto;
+import com.doanmobile.service.INoteService;
+import com.doanmobile.service.IUserService;
+
+@RestController
+public class NoteApi {
+	@Autowired
+	private IUserService userService;
+	
+	@Autowired
+	private INoteService noteService;
+	
+	@PostMapping("/note/{id}")
+    public ResponseEntity<String> addNoteToUser(@PathVariable long id, @RequestBody NoteDto dto) {
+        userService.addNoteToUser(id, dto);
+        return ResponseEntity.ok("Note added successfully");
+    }
+	
+	@GetMapping("/notes/{id}")
+	public List<NoteDto> getAllNotesForUser(@PathVariable Long id) {
+		return userService.getAllNotesForUser(id);
+	}
+
+	
+	@GetMapping("/note/{userId}/{noteId}")
+	public NoteDto getNotesById(@PathVariable Long userId, @PathVariable Long noteId) {
+		return userService.getNoteById(userId,noteId);
+	}
+	
+	@PutMapping("/note/{userId}/{noteId}/update")
+	public void getNotesById(@RequestBody NoteDto noteDto ,@PathVariable Long userId, @PathVariable Long noteId) {
+		userService.update(noteDto ,userId,noteId);
+	}
+	
+	@DeleteMapping("/note/{userId}/{noteId}/delete")
+	public void deleteNote(@PathVariable Long userId, @PathVariable Long noteId) {
+		userService.delete(userId,noteId);
+	}
+	
+	@GetMapping("/note/search/{userid}")
+	public NoteDto deleteNote(@RequestBody String title, @PathVariable Long userid) {
+		return noteService.searchNote(title);
+	} 
+}

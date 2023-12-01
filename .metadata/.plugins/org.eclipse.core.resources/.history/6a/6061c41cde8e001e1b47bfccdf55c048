@@ -1,0 +1,176 @@
+package com.doanmobile.service.impl;
+
+import java.sql.Time;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+
+import com.doanmobile.converter.NoteConverter;
+import com.doanmobile.converter.UserConverter;
+import com.doanmobile.dto.NoteDto;
+import com.doanmobile.dto.UserDto;
+import com.doanmobile.entity.NoteEntity;
+import com.doanmobile.entity.UserEntity;
+import com.doanmobile.exception.NoteNotFoundException;
+import com.doanmobile.exception.UserNotFoundException;
+import com.doanmobile.repository.NoteRepository;
+import com.doanmobile.repository.UserRepository;
+import com.doanmobile.service.IUserService;
+
+@Service
+public class UserService implements IUserService {
+
+	@Autowired
+	private UserRepository userRepository;
+
+	@Autowired
+	private UserConverter userConverter;
+
+	@Autowired
+	private NoteConverter noteConverter;
+
+	@Autowired
+	private NoteRepository noteRepository;
+
+	@Override
+	public ResponseEntity<String> login(UserDto userDto) {
+		String username = userDto.getUserName();
+		String password = userDto.getPassword();
+		// tìm kiếm tài khoản
+		UserEntity userEntity = userRepository.findByUserName(username);
+		// check tk nếu được tìm thấy trong db và mk khớp->success
+		if (userEntity != null && password.equals(userEntity.getPassword())) {
+			return ResponseEntity.ok("Login successful!");
+		} else {
+			return ResponseEntity.badRequest().body("Invalid username or password");
+		}
+	}
+
+	@Override
+	public UserDto getUserById(long userId) {
+		Optional<UserEntity> optionalUserEntity = userRepository.findById(userId);
+		if (optionalUserEntity.isPresent()) {
+			UserEntity userEntity = optionalUserEntity.get();
+			System.out.println("User found: " + userEntity.getUserName());
+			return userConverter.todto(userEntity);
+		} else {
+			return null;
+		}
+	}
+
+//	@Override
+//	public NoteDto save(NoteDto noteDto) {
+//		UserEntity userEntity = userRepository.findByUserName("");
+//		NoteEntity noteEntity = noteConverter.toEntity(noteDto);
+//		noteEntity.setUser(userEntity);
+//		noteEntity = noteRepository.save(noteEntity);
+//		return noteConverter.toDto(noteEntity);
+//	}
+
+	@Override
+	public void addNoteToUser(Long userId, NoteDto noteDto) {
+		Optional<UserEntity> optionalUserEntity = userRepository.findById(userId);
+
+		if (optionalUserEntity.isPresent()) {
+			UserEntity user = optionalUserEntity.get();
+			NoteEntity noteEntity = noteConverter.toEntity(noteDto);
+			noteEntity.setUser(user);
+			noteEntity.setCreatedDate(new Time(System.currentTimeMillis()));
+			// gọi đến bảng note thông qua user.getnote->sau đó thêm note mới
+			user.getNotes().add(noteEntity);
+			userRepository.save(user);
+		} else {
+			throw new RuntimeException("User not found");
+		}
+	}
+
+	@Override
+	public List<NoteDto> getAllNotesForUser(Long userId) {
+		List<NoteDto> list = new ArrayList<NoteDto>();
+		NoteDto noteDto = new NoteDto();
+		Optional<UserEntity> optionalUserEntity = userRepository.findById(userId);
+
+		if (optionalUserEntity.isPresent()) {
+			UserEntity userEntity = optionalUserEntity.get();
+			for (NoteEntity i : userEntity.getNotes()) {
+				noteDto = noteConverter.toDto(i);
+				list.add(noteDto);
+			}
+			return list;
+		} else {
+			throw new RuntimeException("User not found");
+		}
+	}
+
+	@Override
+	public NoteDto getNoteById(Long userId, Long noteId) {
+		Optional<UserEntity> optionalUserEntity = userRepository.findById(userId);
+		NoteDto noteDto = new NoteDto();
+		if (optionalUserEntity.isPresent()) {
+			UserEntity userEntity = optionalUserEntity.get();
+			for (NoteEntity i : userEntity.getNotes()) {
+				if (noteId == i.getId()) {
+					noteDto = noteConverter.toDto(i);
+				}
+
+			}
+			return noteDto;
+		} else {
+			throw new RuntimeException("User not found");
+		}
+
+	}
+
+	@Override
+	public void update(NoteDto noteDto, Long userId, Long noteId) {
+		UserEntity userEntity = userRepository.findById(userId)
+				.orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
+		NoteEntity existingNoteEntity = noteRepository.findById(noteId)
+				.orElseThrow(() -> new NoteNotFoundException("Note not found with ID: " + noteId));
+		if (!existingNoteEntity.getUser().getId().equals(userId)) {
+			throw new RuntimeException(
+					"Access denied to update note with ID: " + noteId + " for user with ID: " + userId);
+		}
+		existingNoteEntity.setTitle(noteDto.getTitle());
+		existingNoteEntity.setContent(noteDto.getContent());
+		existingNoteEntity.setModifiedDate(new Time(System.currentTimeMillis()));
+		noteRepository.save(existingNoteEntity);
+	}
+
+	@Override
+	public void delete(Long userId, Long noteId) {
+		UserEntity userEntity = userRepository.findById(userId)
+				.orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
+		NoteEntity note = noteRepository.findById(noteId)
+				.orElseThrow(() -> new NoteNotFoundException("Note not found with ID: " + noteId));
+		if (!note.getUser().getId().equals(userId)) {
+			throw new RuntimeException(
+					"Access denied to update note with ID: " + noteId + " for user with ID: " + userId);
+		}
+		noteRepository.delete(note);
+	}
+
+	@Override
+	public List<NoteDto> searchNote(String title ,Long userId) {
+			List<NoteDto> list = new ArrayList<NoteDto>();
+			UserEntity userEntity = userRepository.findById(userId)
+					.orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
+			NoteEntity NoteEntity = noteRepository.findByTitle(title)
+					.orElseThrow(() -> new NoteNotFoundException("Note not found with ID: " + title));
+			if (!existingNoteEntity.getUser().getId().equals(userId)) {
+				throw new RuntimeException(
+						"Access denied to update note with ID: " + noteId + " for user with ID: " + userId);
+			}
+			noteRepository.save(existingNoteEntity);
+			
+			return list;
+		} else {
+			throw new RuntimeException("User not found");
+		}
+	}
+
+}
